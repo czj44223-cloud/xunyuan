@@ -1,0 +1,63 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import dns from 'node:dns';
+const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'xunyuan-security-'));
+process.env.XUNYUAN_WORK_ROOT = path.join(tmp, 'work');
+process.env.DEEPSEEK_API_KEY = 'sk-security-test-only-placeholder';
+const { workPath, WORK_ROOT, initWorkRoot } = await import('../src/core/util/workspace.js');
+const { localAccess } = await import('../src/core/util/localAccess.js');
+const { LLM } = await import('../src/core/llm/deepseek.js');
+const { redactText, redactData } = await import('../src/core/util/http.js');
+const { validateNetworkUrl, publicLookup, safeFetch } = await import('../src/core/util/safeFetch.js');
+const { BrowserPool } = await import('../src/core/browser/pool.js');
+const { renderSafeMarkdown } = await import('../src/web/sanitize.js');
+const { isPrivateIp } = await import('../src/core/util/ssrf.js');
+const { maskSecret, saveConfigPatch, loadConfig } = await import('../src/core/config.js');
+await initWorkRoot();
+const guard = localAccess(8787);
+let cookie;
+function request(method, pathname, headers = {}) {
+ const req = { method, path: pathname, headers: { host: '127.0.0.1:8787', ...headers } };
+ const result = { status: 200, next: false, headers: {} };
+ const res = { setHeader(k,v) { result.headers[k]=v; }, status(n) { result.status=n; return this; }, json(v) { result.body=v; return this; } };
+ guard(req,res,()=>result.next=true); return result;
+}
+test('合法首页创建HttpOnly Strict会话，令牌不进入正文',()=>{
+ const r=request('GET','/');assert.equal(r.next,true);cookie=r.headers['Set-Cookie'].split(';')[0];
+ assert.match(r.headers['Set-Cookie'],/HttpOnly; SameSite=Strict/);assert.equal(r.body,undefined);
+});
+test('health允许无会话',()=>assert.equal(request('GET','/api/health').next,true));
+test('API无会话拒绝',()=>assert.equal(request('GET','/api/config').status,401));
+test('大小写API不得绕过会话',()=>assert.equal(request('GET','/API/config').status,401));
+test('恶意cookie格式拒绝而非异常',()=>assert.equal(request('GET','/api/config',{cookie:'xunyuan_session='+ '非'.repeat(64)}).status,401));
+test('合法会话API读取允许',()=>assert.equal(request('GET','/api/config',{cookie}).next,true));
+test('恶意Host拒绝',()=>assert.equal(request('GET','/',{host:'evil.example:8787'}).status,403));
+test('恶意Origin拒绝',()=>assert.equal(request('POST','/api/config',{cookie,origin:'https://evil.example','x-xunyuan-request':'1'}).status,403));
+test('跨站首页无法引导会话',()=>assert.equal(request('GET','/',{'sec-fetch-site':'cross-site'}).status,403));
+test('状态修改缺CSRF拒绝',()=>assert.equal(request('POST','/api/config',{cookie,origin:'http://127.0.0.1:8787'}).status,403));
+test('状态修改缺Origin拒绝',()=>assert.equal(request('POST','/api/config',{cookie,'x-xunyuan-request':'1'}).status,403));
+test('合法同源会话修改允许',()=>assert.equal(request('POST','/api/config',{cookie,origin:'http://127.0.0.1:8787','x-xunyuan-request':'1'}).next,true));
+test('合法工作目录与文件',async()=>{const d=await workPath(path.join(WORK_ROOT,'assets'),{create:true,directory:true});const f=await workPath(path.join(d,'test.txt'),{create:true});await fs.writeFile(f,'test');assert.equal(await workPath(f),f);});
+test('绝对越界拒绝',async()=>assert.rejects(workPath(path.join(tmp,'outside.txt'),{create:true}),/路径/));
+test('目录穿越拒绝',async()=>assert.rejects(workPath(WORK_ROOT+'/../outside.txt',{create:true}),/路径/));
+test('编码与双编码穿越拒绝',async()=>{for(const p of ['%2e%2e','%252e%252e','%2fetc'])await assert.rejects(workPath(WORK_ROOT+'/'+p,{create:true}),/路径/);});
+test('符号链接文件拒绝',async()=>{await fs.writeFile(path.join(tmp,'outside.txt'),'dummy');await fs.symlink(path.join(tmp,'outside.txt'),path.join(WORK_ROOT,'link.txt'));await assert.rejects(workPath(path.join(WORK_ROOT,'link.txt')),/路径/);});
+test('符号链接目录拒绝',async()=>{await fs.symlink(tmp,path.join(WORK_ROOT,'linkdir'));await assert.rejects(workPath(path.join(WORK_ROOT,'linkdir','new.txt'),{create:true}),/路径/);});
+test('非官方LLM配置与运行时目标均拒绝',()=>{assert.throws(()=>new LLM({llm:{baseUrl:'https://evil.example'}}),/官方/);assert.throws(()=>saveConfigPatch({config:{llm:{baseUrl:'https://evil.example'}}}),/官方/);assert.equal(new LLM().baseUrl,'https://api.deepseek.com');});
+test('mask不显示任何末四位',()=>{assert.equal(maskSecret('test-1234567890'),'已配置（隐藏）');assert.equal(maskSecret(''), '');});
+test('配置不能启用浏览器或外部监听',()=>{assert.throws(()=>saveConfigPatch({config:{server:{host:'0.0.0.0'}}}),/安全模式/);assert.throws(()=>saveConfigPatch({config:{browser:{disabled:false}}}),/安全模式/);assert.equal(loadConfig().fetch.browserFallback,false);});
+test('SSRF私网回环IPv6-mapped和端口拒绝',()=>{for(const u of ['http://127.0.0.1','http://10.0.0.1','http://169.254.169.254','http://[::1]','http://[::ffff:7f00:1]','http://8.8.8.8:8787','file:///etc/passwd','http://user:pass@8.8.8.8'])assert.throws(()=>validateNetworkUrl(u));assert.equal(validateNetworkUrl('https://8.8.8.8').protocol,'https:');assert.equal(isPrivateIp('::ffff:7f00:1'),true);});
+test('重定向目标相同过滤、隐式follow拒绝',async()=>{assert.throws(()=>validateNetworkUrl(new URL('http://127.0.0.1/x','https://example.com')));await assert.rejects(safeFetch('https://8.8.8.8',{redirect:'follow'}),/重定向/);});
+test('连接时DNS变私网拒绝；混合公网私网拒绝',async()=>{
+ const original=dns.lookup;try{for(const records of [[{address:'127.0.0.1',family:4}],[{address:'8.8.8.8',family:4},{address:'10.0.0.1',family:4}]]){dns.lookup=(_h,_o,cb)=>cb(null,records);await assert.rejects(new Promise((resolve,reject)=>publicLookup('mock.test',{},(e,a)=>e?reject(e):resolve(a))),/DNS/);}}finally{dns.lookup=original;}
+});
+test('连接时DNS使用已校验地址，不再另行解析',async()=>{const original=dns.lookup;try{dns.lookup=(_h,_o,cb)=>cb(null,[{address:'8.8.8.8',family:4}]);assert.equal(await new Promise((resolve,reject)=>publicLookup('mock.test',{},(e,a)=>e?reject(e):resolve(a))),'8.8.8.8');}finally{dns.lookup=original;}});
+test('全部浏览器导航/重定向/子资源在启动前fail closed',async()=>{for(const kind of ['navigation','redirect','subresource']){const pool=new BrowserPool({disabled:false});await assert.rejects(pool.getBrowser(),{code:'BROWSER_DISABLED'});await assert.rejects(pool.newPage(kind),{code:'BROWSER_DISABLED'});}});
+test('DOMPurify缺失时即使marked存在也纯文本',()=>{const html=renderSafeMarkdown('<img src=x onerror=alert(1)>',{marked:{parse:()=>'<script>evil()</script>'}});assert.ok(!html.includes('<script>'));assert.ok(html.includes('&lt;img'));});
+test('正常净化分支使用DOMPurify',()=>{let called=false;const html=renderSafeMarkdown('hello',{marked:{parse:()=>'<p>hello</p>'},DOMPurify:{sanitize:x=>{called=true;return x;}}});assert.equal(called,true);assert.equal(html,'<p>hello</p>');});
+test('结构化/文本/日志秘密脱敏',()=>{const secret=process.env.DEEPSEEK_API_KEY;for(const value of ['Bearer abcdefghijk', 'token=abcdefghijk', secret])assert.ok(!redactText(value).includes(value));assert.ok(!JSON.stringify(redactData({error:secret,nested:{message:secret},token:'abc'})).includes(secret));});
+test('事件落盘前秘密脱敏',async()=>{const {RunEvents}=await import('../src/core/events.js');const e=new RunEvents(path.join(tmp,'events'));await e.init();e.emit('error',{message:process.env.DEEPSEEK_API_KEY,data:{error:process.env.DEEPSEEK_API_KEY}});await e.flush();assert.ok(!(await fs.readFile(e.file,'utf8')).includes(process.env.DEEPSEEK_API_KEY));});
+test.after(async()=>{await fs.rm(tmp,{recursive:true,force:true});});

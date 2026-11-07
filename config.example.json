@@ -1,0 +1,48 @@
+{
+  "llm": {
+    "baseUrl": "https://api.deepseek.com",
+    "model": "deepseek-chat",
+    "maxInputTokens": 30000,
+    "timeoutMs": 120000
+  },
+  "search": {
+    "perProviderCount": 10,
+    "timeoutMs": 20000
+  },
+  "fetch": {
+    "concurrency": 4,
+    "timeoutMs": 25000,
+    "maxBytes": 5242880,
+    "perHostDelayMs": 1000,
+    "browserFallback": false,
+    "deepseekFetch": false
+  },
+  "pipeline": {
+    "fetchLimit": 8,
+    "deepFetchLimit": 25,
+    "maxRounds": 2
+  },
+  "providers": {
+    "deepseek": {
+      "enabled": true
+    },
+    "tavily": {
+      "enabled": false
+    },
+    "bocha": {
+      "enabled": false
+    },
+    "serper": {
+      "enabled": false
+    },
+    "exa": {
+      "enabled": false
+    },
+    "searxng": {
+      "enabled": false
+    },
+    "browser": {
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>寻源 · 信息收集台</title>
+  <meta name="description" content="安全预览：搜索API、HTTP正文和AI整理；浏览器网络已禁用。" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='10' fill='%234f46e5'/%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%234f46e5' stroke-width='3' opacity='.45'/%3E%3Ccircle cx='32' cy='32' r='30' fill='none' stroke='%234f46e5' stroke-width='2' opacity='.2'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="28" height="28">
+            <circle cx="20" cy="20" r="5.5" fill="currentColor" />
+            <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5" />
+            <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".22" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <strong>寻源</strong>
+          <span>信息收集台</span>
+        </div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="btn btn-primary btn-block" id="btn-new">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          新建研究
+        </button>
+        <button class="btn btn-ghost btn-block" id="btn-new-assets">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v10H4z"/><path d="M12 13v4M10 15h4"/></svg>
+          找素材下载
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label" id="history-label">历史任务</div>
+        <nav class="history" id="history" aria-label="历史任务"></nav>
+      </div>
+
+      <div class="sidebar-foot">
+        <div class="provider-mini" id="provider-mini"></div>
+        <button class="btn btn-ghost btn-block" id="btn-settings">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          设置与密钥
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title" id="topbar-title">新建收集</div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="btn-theme" title="切换主题" aria-label="切换主题">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="view" id="view-home">
+        <div class="hero">
+          <p class="eyebrow">SEARCH · FETCH · SYNTHESIZE</p>
+          <h1>把一个问题，<br />变成一份有据可查的报告。</h1>
+          <p class="lede">安全预览：搜索API检索、HTTP抓取正文、AI整理引用；真实外网兼容性待验证。</p>
+        </div>
+
+        <form class="composer card" id="form-run" autocomplete="off">
+          <label class="sr-only" for="query">研究主题</label>
+          <textarea id="query" name="query" rows="2" maxlength="500"
+            placeholder="例如：2026 年固态电池量产进展与主要玩家，或：DeepSeek 搜索 API 的计费规则"></textarea>
+          <div class="composer-foot">
+            <div class="mode-switch" role="tablist" aria-label="模式">
+              <button type="button" class="mode-option active" data-mode="fast">快速</button>
+              <button type="button" class="mode-option" data-mode="deep">深度</button>
+            </div>
+            <button class="btn btn-primary" type="submit" id="btn-run">
+              开始收集
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <div class="providers" id="providers" role="group" aria-label="搜索源"></div>
+
+          <details class="advanced">
+            <summary>高级选项</summary>
+            <div class="advanced-grid">
+              <label class="field">
+                <span>抓取页数上限</span>
+                <input type="number" id="opt-fetch" min="1" max="30" value="8" />
+              </label>
+              <label class="field" id="field-rounds" hidden>
+                <span>深度轮数</span>
+                <input type="number" id="opt-rounds" min="1" max="3" value="2" />
+              </label>
+              <label class="field field-check">
+                <span>AI 整理</span>
+                <span class="switch"><input type="checkbox" id="opt-llm" checked /><i></i></span>
+              </label>
+              <label class="field field-check">
+                <span>生成对比表</span>
+                <span class="switch"><input type="checkbox" id="opt-table" /><i></i></span>
+              </label>
+            </div>
+          </details>
+          <p class="composer-hint" id="composer-hint"></p>
+        </form>
+
+        <div class="feature-row">
+          <div class="feature">
+            <span class="feature-num">01</span>
+            <strong>多源检索</strong>
+            <p>可配置DeepSeek、Tavily、博查等API；外网兼容性及免密模式未验证，浏览器兜底已禁用。</p>
+          </div>
+          <div class="feature">
+            <span class="feature-num">02</span>
+            <strong>受限HTTP正文抓取</strong>
+            <p>仅抓取HTTP正文；浏览器JS渲染、浏览器搜索及Mixkit/Coverr已禁用。</p>
+          </div>
+          <div class="feature">
+            <span class="feature-num">03</span>
+            <strong>可核查的整理</strong>
+            <p>每页结构化抽取，跨来源去重比对，结论逐条标注来源；深度模式自动追问补全。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-run" hidden>
+        <div class="run-head">
+          <div class="run-head-main">
+            <div class="run-query" id="run-query"></div>
+            <div class="run-meta" id="run-meta"></div>
+          </div>
+          <div class="run-actions">
+            <span class="status-pill" id="run-status"></span>
+            <button class="btn btn-ghost" id="btn-cancel" hidden>取消</button>
+            <button class="btn btn-ghost" id="btn-export" disabled>导出</button>
+          </div>
+        </div>
+
+        <div class="steps" id="steps">
+          <div class="step" data-step="search"><i></i><span>检索</span></div>
+          <div class="step" data-step="dedupe"><i></i><span>去重</span></div>
+          <div class="step" data-step="fetch"><i></i><span>抓取</span></div>
+          <div class="step" data-step="extract"><i></i><span>抽取</span></div>
+          <div class="step" data-step="synthesize"><i></i><span>整理</span></div>
+        </div>
+
+        <div class="run-grid">
+          <div class="card panel log-panel">
+            <div class="panel-head">
+              <h3>运行日志</h3>
+              <span class="muted small" id="log-count"></span>
+            </div>
+            <div class="log" id="log" aria-live="polite"></div>
+          </div>
+          <div class="card panel sources-panel">
+            <div class="panel-head">
+              <h3>来源</h3>
+              <div class="source-filters" id="source-filters">
+                <span class="muted small" id="source-count"></span>
+              </div>
+            </div>
+            <div class="sources" id="sources"></div>
+          </div>
+        </div>
+
+        <div class="card results" id="results" hidden>
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="report" role="tab">综述报告</button>
+            <button class="tab" data-tab="table" role="tab">对比表</button>
+            <button class="tab" data-tab="sources" role="tab">来源列表</button>
+            <button class="tab" data-tab="json" role="tab">原始记录</button>
+            <div class="tabs-actions">
+              <button class="btn btn-ghost btn-sm" id="btn-copy" title="复制当前内容">复制</button>
+              <a class="btn btn-ghost btn-sm" id="btn-download" href="#" download>下载</a>
+            </div>
+          </div>
+
+          <div class="tab-pane" data-pane="report">
+            <article class="markdown" id="report-body"></article>
+          </div>
+          <div class="tab-pane" data-pane="table" hidden>
+            <div class="table-wrap" id="table-body"></div>
+          </div>
+          <div class="tab-pane" data-pane="sources" hidden>
+            <div class="source-list" id="source-list"></div>
+          </div>
+          <div class="tab-pane" data-pane="json" hidden>
+            <pre class="json" id="json-body"></pre>
+          </div>
+
+          <div class="warnings" id="warnings" hidden></div>
+        </div>
+      </section>
+
+
+      <section class="view" id="view-assets" hidden>
+
+        <div class="asset-console card">
+          <div class="console-top">
+            <button type="button" class="folder-btn" id="btn-work-folder" title="选择工作文件夹">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span class="fb-text">
+                <small>工作文件夹</small>
+                <strong id="wf-name">选择文件夹</strong>
+              </span>
+              <span class="fb-caret">▾</span>
+            </button>
+
+            <form class="demand-box" id="form-asset" autocomplete="off">
+              <label class="sr-only" for="sf-brief">素材需求</label>
+              <textarea id="sf-brief" rows="1" maxlength="500"
+                placeholder="描述需要的素材，例如：城市夜景航拍、雨夜慢镜头……"></textarea>
+              <button type="submit" class="send-btn" id="btn-asset-run" title="开始收集（Ctrl+Enter）" aria-label="开始收集">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              </button>
+            </form>
+          </div>
+
+          <div class="console-mid">
+            <div class="type-panel">
+              <div class="type-head">
+                <span>文件类型</span>
+                <em>按钮式 · 可添加</em>
+              </div>
+              <div class="type-pills" id="type-list"></div>
+              <div class="type-add-wrap">
+                <button type="button" class="type-add" id="btn-add-type" aria-expanded="false">＋ 添加类型</button>
+                <div class="type-menu" id="type-menu" hidden></div>
+                <div class="custom-type-form" id="custom-type-form" hidden>
+                  <div class="ct-row">
+                    <label>类型名称<input id="ct-label" maxlength="12" placeholder="如：音效" /></label>
+                    <label>文件后缀<input id="ct-ext" maxlength="6" placeholder="如：wav" /></label>
+                  </div>
+                  <p class="ct-hint">后缀必填，如 wav、srt、cube、png；自定义类型会通过网页检索寻找对应格式。</p>
+                  <div class="ct-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" id="btn-ct-cancel">取消</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-ct-add">添加类型</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="config-col">
+              <button type="button" class="config-toggle" id="btn-prompts">
+                <span class="ct-label">提示词合集</span>
+                <span class="config-summary">常用需求 · 一键填入</span>
+              </button>
+              <button type="button" class="config-toggle" id="btn-asset-config" aria-expanded="false">
+                <span class="ct-label">搜索配置</span>
+                <span class="config-summary" id="config-summary">API素材源（需配置）</span>
+              </button>
+              <div class="config-pop" id="asset-config" hidden>
+                <div class="providers" id="asset-sources" role="group" aria-label="素材来源"></div>
+                <label class="mini-switch">
+                  <span>AI 规划检索词</span>
+                  <span class="switch"><input type="checkbox" id="sf-llm" checked /><i></i></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <p class="composer-hint" id="asset-hint"></p>
+
+          <input type="hidden" id="sf-folder" />
+        </div>
+
+      </section>
+
+      <section class="view" id="view-asset-job" hidden>
+        <div class="run-head">
+          <div class="run-head-main">
+            <div class="run-query" id="aj-brief"></div>
+            <div class="run-meta" id="aj-meta"></div>
+          </div>
+          <div class="run-actions">
+            <span class="status-pill" id="aj-status"></span>
+            <a class="btn btn-ghost" id="aj-manifest" target="_blank" hidden>素材清单</a>
+            <button class="btn btn-ghost" id="aj-open" disabled>打开文件夹</button>
+            <button class="btn btn-ghost" id="aj-cancel" hidden>取消</button>
+          </div>
+        </div>
+
+        <div class="steps" id="aj-steps">
+          <div class="step" data-step="plan"><i></i><span>规划</span></div>
+          <div class="step" data-step="search"><i></i><span>检索</span></div>
+          <div class="step" data-step="download"><i></i><span>下载</span></div>
+          <div class="step" data-step="organize"><i></i><span>整理</span></div>
+        </div>
+
+        <div class="run-grid">
+          <div class="card panel log-panel">
+            <div class="panel-head">
+              <h3>运行日志</h3>
+              <span class="muted small" id="aj-log-count"></span>
+            </div>
+            <div class="log" id="aj-log" aria-live="polite"></div>
+          </div>
+          <div class="card panel sources-panel">
+            <div class="panel-head">
+              <h3>素材文件</h3>
+              <span class="muted small" id="aj-count"></span>
+            </div>
+            <div class="sources asset-grid" id="aj-files"></div>
+          </div>
+        </div>
+
+        <div class="card results" id="aj-summary" hidden>
+          <div class="panel-head"><h3>任务小结</h3></div>
+          <div class="tab-pane" id="aj-summary-body"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-loading" hidden>
+        <div class="loading"><span></span><span></span><span></span></div>
+      </section>
+    </main>
+
+  <aside class="drawer" id="asset-drawer" aria-hidden="true">
+    <button type="button" class="drawer-tab" id="btn-drawer-toggle" title="查看素材">查 看</button>
+    <div class="drawer-panel card">
+      <div class="drawer-head">
+        <div class="drawer-title">
+          <h3>素材查看</h3>
+          <span class="small muted" id="drawer-path"></span>
+        </div>
+        <div class="drawer-actions">
+          <button type="button" class="icon-btn" id="btn-drawer-refresh" title="刷新">⟳</button>
+          <button type="button" class="icon-btn" id="btn-drawer-open" title="打开文件夹">⤢</button>
+          <button type="button" class="icon-btn" id="btn-drawer-close" title="收起">×</button>
+        </div>
+      </div>
+      <div class="drawer-files" id="drawer-files"></div>
+    </div>
+  </aside>
+  </div>
+
+
+
+
+
+  <dialog id="prompts-dialog" class="settings prompts-dialog">
+    <div class="settings-form">
+      <header>
+        <h2>提示词合集</h2>
+        <button class="icon-btn" type="button" id="prompts-close" aria-label="关闭">✕</button>
+      </header>
+      <p class="settings-note">每个提示词是一个按钮，点击即可填入需求框；每个提示词可以设置自己的图标。</p>
+      <div class="prompt-grid" id="prompt-list"></div>
+      <div class="prompt-editor">
+        <div class="pe-head">
+          <span id="pe-mode">新建提示词</span>
+          <button class="link-btn" type="button" id="btn-pe-reset">清空</button>
+        </div>
+        <div class="pe-row">
+          <div class="icon-picker">
+            <button type="button" class="icon-preview" id="prompt-icon-btn" title="选择图标">🎬</button>
+            <div class="icon-menu" id="icon-menu" hidden>
+              <div class="icon-grid" id="icon-grid"></div>
+              <input id="icon-custom" maxlength="8" placeholder="或输入 emoji" />
+            </div>
+          </div>
+          <input id="prompt-title" maxlength="40" placeholder="标题，如：城市夜景" />
+        </div>
+        <textarea id="prompt-content" rows="2" maxlength="1000" placeholder="提示词内容，会填入需求框"></textarea>
+        <div class="pe-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-prompt-current">用当前需求填充</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-prompt-save">保存提示词</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="folder-dialog" class="settings folder-dialog">
+    <div class="settings-form">
+      <header>
+        <h2>选择素材保存文件夹</h2>
+        <button class="icon-btn" id="folder-close" type="button" aria-label="关闭">✕</button>
+      </header>
+      <div class="folder-bar">
+        <button class="btn btn-ghost btn-sm" id="folder-up" type="button">上一级</button>
+        <input id="folder-path" type="text" readonly />
+        <button class="btn btn-ghost btn-sm" id="folder-home" type="button">用户目录</button>
+      </div>
+      <div class="folder-list" id="folder-list"></div>
+      <footer>
+        <button class="btn btn-ghost" id="folder-cancel" type="button">取消</button>
+        <button class="btn btn-primary" id="folder-select" type="button">选择此文件夹</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="settings-dialog" class="settings">
+    <form method="dialog" class="settings-form" id="settings-form">
+      <header>
+        <h2>设置与密钥</h2>
+        <button class="icon-btn" value="cancel" aria-label="关闭" type="submit">✕</button>
+      </header>
+      <p class="settings-note">密钥可由环境变量提供；网页保存会写入本机 .env。调用API时凭据发送至对应服务，查询与整理文本也会发送至所选服务。密钥不会回显。安全模式禁用浏览器抓取/搜索与Mixkit/Coverr，目录限于专用工作根。</p>
+
+      <div class="settings-body">
+        <label class="field">
+          <span>DeepSeek API Key <em id="key-deepseek"></em></span>
+          <input type="password" name="deepseek" placeholder="sk-…（用于搜索与整理）" autocomplete="off" />
+          <span class="field-actions">
+            <button type="button" class="link-btn" data-test="llm">测试对话</button>
+            <button type="button" class="link-btn" data-test="search" data-provider="deepseek">测试搜索</button>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Tavily API Key <em id="key-tavily"></em></span>
+          <input type="password" name="tavily" placeholder="tvly-…（留空则使用免密模式）" autocomplete="off" />
+          <span class="field-actions">
+            <button type="button" class="link-btn" data-test="search" data-provider="tavily">测试搜索</button>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>博查 Bocha API Key <em id="key-bocha"></em></span>
+          <input type="password" name="bocha" placeholder="中文网页覆盖较好（可选）" autocomplete="off" />
+          <span class="field-actions">
+            <button type="button" class="link-btn" data-test="search" data-provider="bocha">测试搜索</button>
+          </span>
+        </label>
+
+        <div class="two-col">
+          <label class="field">
+            <span>Serper API Key <em id="key-serper"></em></span>
+            <input type="password" name="serper" placeholder="Google 搜索（可选）" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Exa API Key <em id="key-exa"></em></span>
+            <input type="password" name="exa" placeholder="语义搜索（可选）" autocomplete="off" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>SearXNG 地址 <em id="key-searxng"></em></span>
+          <input type="text" name="searxng" placeholder="http://127.0.0.1:8888（可选）" autocomplete="off" />
+        </label>
+
+        <div class="two-col">
+          <label class="field">
+            <span>Pixabay API Key <em id="key-pixabay"></em></span>
+            <input type="password" name="pixabay" placeholder="素材图库 · 免费注册（可选）" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Pexels API Key <em id="key-pexels"></em></span>
+            <input type="password" name="pexels" placeholder="素材图库 · 免费注册（可选）" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="two-col">
+          <label class="field">
+            <span>整理模型</span>
+            <input type="text" name="model" placeholder="deepseek-chat" />
+          </label>
+          <label class="field">
+            <span>浏览器路径</span>
+            <input type="text" name="chromePath" placeholder="安全模式禁用浏览器，无需配置" disabled />
+          </label>
+        </div>
+
+        <div class="test-result" id="test-result" hidden></div>
+      </div>
+
+      <footer>
+        <button class="btn btn-primary" type="submit" value="save" id="btn-save-settings">保存设置</button>
+        <button class="btn btn-ghost" type="submit" value="cancel">取消</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="/vendor/marked.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
